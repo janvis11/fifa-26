@@ -1,4 +1,4 @@
-# Fan Journey Concierge — GenAI Stadium Assistant (FIFA World Cup 2026)
+# Fan Journey Concierge- GenAI Stadium Assistant (FIFA World Cup 2026)
 
 ## Chosen Vertical
 
