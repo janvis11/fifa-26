@@ -1,0 +1,1 @@
+# Stadium data package initialization.
