@@ -107,17 +107,17 @@
             <span class="px-2 py-0.5 rounded border border-secondary-fixed text-secondary-fixed font-label-sm uppercase tracking-widest text-[10px]">Live Operations</span>
         </div>
         <div class="flex items-center gap-6">
-            <button id="toggle-contrast" aria-pressed="false" class="bg-primary-container hover:bg-surface-container-high border border-white/10 rounded-full px-4 py-1.5 text-xs font-label-sm flex items-center gap-2 text-on-surface transition-all">
+            <button id="toggle-contrast" aria-pressed="false" class="bg-primary-container hover:bg-surface-container-high border border-white/10 rounded-full px-4 py-1.5 text-xs font-label-sm flex items-center gap-2 text-on-surface transition-all focus:outline-none focus:ring-2 focus:ring-secondary-fixed">
                 <span class="material-symbols-outlined text-sm">contrast</span> Contrast Mode
             </button>
             <div class="flex items-center gap-4 text-on-surface-variant">
-                <button id="btn-notifications" class="cursor-pointer hover:text-secondary-fixed active:scale-95 transition-all focus:outline-none" aria-label="Notifications center">
+                <button id="btn-notifications" class="cursor-pointer hover:text-secondary-fixed active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-secondary-fixed rounded-full p-0.5 focus:text-secondary-fixed" aria-label="Notifications center">
                     <span class="material-symbols-outlined">notifications</span>
                 </button>
-                <button id="btn-lang-focus" class="cursor-pointer hover:text-secondary-fixed active:scale-95 transition-all focus:outline-none" aria-label="Select system language">
+                <button id="btn-lang-focus" class="cursor-pointer hover:text-secondary-fixed active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-secondary-fixed rounded-full p-0.5 focus:text-secondary-fixed" aria-label="Select system language">
                     <span class="material-symbols-outlined">language</span>
                 </button>
-                <button id="btn-profile" class="cursor-pointer hover:text-secondary-fixed active:scale-95 transition-all focus:outline-none" aria-label="User profile details">
+                <button id="btn-profile" class="cursor-pointer hover:text-secondary-fixed active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-secondary-fixed rounded-full p-0.5 focus:text-secondary-fixed" aria-label="User profile details">
                     <span class="material-symbols-outlined">account_circle</span>
                 </button>
             </div>
@@ -142,16 +142,16 @@
         <!-- Persona Switcher -->
         <div class="flex flex-col gap-1.5 px-4 mb-6 border-b border-white/5 pb-4">
             <span class="text-[10px] font-label-sm text-on-surface-variant uppercase tracking-wider px-2">Access Persona</span>
-            <button class="btn-persona active text-left px-3 py-2 rounded bg-secondary-container/10 text-secondary-fixed border-l-4 border-secondary-fixed flex items-center gap-3 text-sm font-semibold animate-all" data-persona="fan" aria-pressed="true">
+            <button class="btn-persona active text-left px-3 py-2 rounded bg-secondary-container/10 text-secondary-fixed border-l-4 border-secondary-fixed flex items-center gap-3 text-sm font-semibold animate-all focus:outline-none focus:ring-2 focus:ring-secondary-fixed" data-persona="fan" aria-pressed="true">
                 <span class="material-symbols-outlined text-sm">groups</span> Fan Concierge
             </button>
-            <button class="btn-persona text-left px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 text-sm animate-all" data-persona="volunteer" aria-pressed="false">
+            <button class="btn-persona text-left px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 text-sm animate-all focus:outline-none focus:ring-2 focus:ring-secondary-fixed" data-persona="volunteer" aria-pressed="false">
                 <span class="material-symbols-outlined text-sm">support_agent</span> Volunteer Assist
             </button>
-            <button class="btn-persona text-left px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 text-sm animate-all" data-persona="venue_staff" aria-pressed="false">
+            <button class="btn-persona text-left px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 text-sm animate-all focus:outline-none focus:ring-2 focus:ring-secondary-fixed" data-persona="venue_staff" aria-pressed="false">
                 <span class="material-symbols-outlined text-sm">badge</span> Venue Staff
             </button>
-            <button class="btn-persona text-left px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 text-sm animate-all" data-persona="organizer" aria-pressed="false">
+            <button class="btn-persona text-left px-3 py-2 rounded text-on-surface-variant hover:bg-surface-container-high flex items-center gap-3 text-sm animate-all focus:outline-none focus:ring-2 focus:ring-secondary-fixed" data-persona="organizer" aria-pressed="false">
                 <span class="material-symbols-outlined text-sm">settings_remote</span> Ops Control
             </button>
         </div>
@@ -162,14 +162,14 @@
             
             <div class="space-y-1">
                 <label for="select-stadium" class="text-xs text-on-surface-variant block">Active Stadium</label>
-                <select id="select-stadium" class="w-full bg-surface-container border border-white/10 rounded px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed">
+                <select id="select-stadium" class="w-full bg-surface-container border border-white/10 rounded px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed focus:ring-1 focus:ring-secondary-fixed">
                     <option value="" disabled selected>Loading...</option>
                 </select>
             </div>
             
             <div class="space-y-1">
                 <label for="select-language" class="text-xs text-on-surface-variant block">Preferred Language</label>
-                <select id="select-language" class="w-full bg-surface-container border border-white/10 rounded px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed">
+                <select id="select-language" class="w-full bg-surface-container border border-white/10 rounded px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed focus:ring-1 focus:ring-secondary-fixed">
                     <option value="en">English (EN)</option>
                     <option value="es">Español (ES)</option>
                     <option value="fr">Français (FR)</option>
@@ -180,7 +180,7 @@
             
             <div class="space-y-1">
                 <label for="select-accessibility" class="text-xs text-on-surface-variant block">Accessibility Need</label>
-                <select id="select-accessibility" class="w-full bg-surface-container border border-white/10 rounded px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed">
+                <select id="select-accessibility" class="w-full bg-surface-container border border-white/10 rounded px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed focus:ring-1 focus:ring-secondary-fixed">
                     <option value="none">None</option>
                     <option value="wheelchair">Step-free / Wheelchair</option>
                     <option value="visual">Visual Assistance</option>
@@ -192,7 +192,7 @@
             
             <div class="space-y-1">
                 <label for="input-kickoff" class="text-xs text-on-surface-variant block">Minutes to Kickoff</label>
-                <input type="number" id="input-kickoff" placeholder="e.g. 45" min="-180" max="360" class="w-full bg-surface-container border border-white/10 rounded px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed"/>
+                <input type="number" id="input-kickoff" placeholder="e.g. 45" min="-180" max="360" class="w-full bg-surface-container border border-white/10 rounded px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed focus:ring-1 focus:ring-secondary-fixed"/>
             </div>
         </div>
 
@@ -236,11 +236,11 @@
                             <div class="w-full h-full relative group">
                                 <img class="w-full h-full object-contain filter brightness-75 group-hover:brightness-95 transition-all duration-700" alt="Futuristic 3D Stadium Mesh View" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACSmtTOifVypDa_AOB8EqntabK-frrpQIhK0hstOoFKZyU7L8LFFz_ovHEsV9O-8DugP4dXviislC-dxbcHNs8QCRXayCteNgAMUNKPHhqdXLmiFBMRDaXvM9-kWv_jPEI6HiDmfHw48Ftm8JrOaQNu_JOoFkHWHOiJ8gfCtw_UrK9ZDcGLasRB1a-At5EevGf6qvxne7S4LsnQ8kh5Ig9t2WIZugg3qxBXJR_CfcPi3M8YQs54irAcFIN0LCiZzM-eHqQWHp7VUxI"/>
                                 <!-- Hotspots -->
-                                <button id="hotspot-gate-a" class="absolute top-1/4 left-1/3 group/node cursor-pointer active:scale-95 focus:outline-none" aria-label="Gate A Status Detail">
+                                <button id="hotspot-gate-a" class="absolute top-1/4 left-1/3 group/node cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-error rounded-full p-0.5" aria-label="Gate A Status Detail">
                                     <div class="w-3.5 h-3.5 bg-error rounded-full animate-ping opacity-75"></div>
                                     <div class="w-3.5 h-3.5 bg-error rounded-full absolute inset-0"></div>
                                 </button>
-                                <button id="hotspot-plaza-b" class="absolute bottom-1/3 right-1/4 group/node cursor-pointer active:scale-95 focus:outline-none" aria-label="Plaza B Status Detail">
+                                <button id="hotspot-plaza-b" class="absolute bottom-1/3 right-1/4 group/node cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-secondary-fixed rounded-full p-0.5" aria-label="Plaza B Status Detail">
                                     <div class="w-3.5 h-3.5 bg-secondary-fixed rounded-full animate-ping opacity-75"></div>
                                     <div class="w-3.5 h-3.5 bg-secondary-fixed rounded-full absolute inset-0"></div>
                                 </button>
@@ -265,8 +265,8 @@
                         <!-- Chat Input Form -->
                         <form id="chat-form" class="space-y-2 mt-auto">
                             <div class="flex gap-2">
-                                <input type="text" id="chat-input" placeholder="Type operations request..." required autocomplete="off" class="flex-grow bg-surface-container border border-white/10 rounded px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed"/>
-                                <button type="submit" id="btn-send" class="bg-secondary-fixed text-on-secondary-fixed font-bold px-4 py-2 rounded text-xs hover:brightness-110 active:scale-95 transition-all">Send</button>
+                                <input type="text" id="chat-input" placeholder="Type operations request..." required autocomplete="off" class="flex-grow bg-surface-container border border-white/10 rounded px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-secondary-fixed focus:ring-1 focus:ring-secondary-fixed"/>
+                                <button type="submit" id="btn-send" class="bg-secondary-fixed text-on-secondary-fixed font-bold px-4 py-2 rounded text-xs hover:brightness-110 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-secondary-fixed">Send</button>
                             </div>
                             <!-- Suggested Action Cards -->
                             <div id="suggested-actions" class="suggested-actions flex gap-1.5 flex-wrap" aria-label="Suggested actions"></div>
@@ -303,7 +303,7 @@
                     <div id="transport-recommendation" class="text-xs text-on-surface-variant leading-relaxed recommendation-box">
                         <p>Select a stadium to receive personalized operations recommendations.</p>
                     </div>
-                    <button id="btn-report" class="w-full py-2.5 bg-secondary-fixed hover:brightness-110 text-on-secondary-fixed font-bold rounded text-xs flex items-center justify-center gap-2 active:scale-95 transition-all mt-4">
+                    <button id="btn-report" class="w-full py-2.5 bg-secondary-fixed hover:brightness-110 text-on-secondary-fixed font-bold rounded text-xs flex items-center justify-center gap-2 active:scale-95 transition-all mt-4 focus:outline-none focus:ring-2 focus:ring-secondary-fixed">
                         <span class="material-symbols-outlined text-xs" style="font-variation-settings: 'FILL' 1;">auto_awesome</span> Generate Full Briefing
                     </button>
                 </div>
