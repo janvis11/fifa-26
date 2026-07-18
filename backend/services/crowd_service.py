@@ -12,10 +12,12 @@ from backend.models import CrowdResponse, ZoneStatus, DensityLevel
 from backend.data.stadium_data import get_stadium
 from backend.genai_client import genai_client
 
+
 def _get_minute_bucket() -> str:
     """Returns the current UTC time bucketed to the nearest minute."""
     now = datetime.datetime.utcnow()
     return now.strftime("%Y-%m-%d %H:%M")
+
 
 def _generate_density_pct(stadium_id: str, zone_name: str, time_bucket: str) -> int:
     """
@@ -28,6 +30,7 @@ def _generate_density_pct(stadium_id: str, zone_name: str, time_bucket: str) -> 
     val = int(hash_val[:8], 16)
     return val % 101
 
+
 def _get_density_level(pct: int) -> DensityLevel:
     """Maps density percentage to category level."""
     if pct < 35:
@@ -38,6 +41,7 @@ def _get_density_level(pct: int) -> DensityLevel:
         return "high"
     else:
         return "critical"
+
 
 def _get_zone_recommendation(level: DensityLevel) -> str:
     """Returns a deterministic action recommendation based on density level."""
@@ -50,6 +54,60 @@ def _get_zone_recommendation(level: DensityLevel) -> str:
     else:
         return "Critical bottleneck. Restrict movement and follow staff directions."
 
+
+def _generate_zones_status(
+    stadium: dict, time_bucket: str
+) -> tuple[List[ZoneStatus], bool]:
+    """
+    Simulates crowd status for all stadium zones and checks if any zone is congested.
+    Why: Keeps zone loop logic separated from prompt construction for better readability.
+    """
+    zones_status: List[ZoneStatus] = []
+    has_congested_zone = False
+
+    for zone_name in stadium["zones"]:
+        zone_id = zone_name.strip().lower().replace(" ", "_")
+        pct = _generate_density_pct(stadium["id"], zone_name, time_bucket)
+        level = _get_density_level(pct)
+
+        if level in ("high", "critical"):
+            has_congested_zone = True
+
+        zones_status.append(
+            ZoneStatus(
+                zone_id=zone_id,
+                name=zone_name,
+                density_level=level,
+                density_pct=pct,
+                recommendation=_get_zone_recommendation(level),
+            )
+        )
+    return zones_status, has_congested_zone
+
+
+def _get_overall_recommendation(
+    zones_status: List[ZoneStatus], has_congested_zone: bool
+) -> str:
+    """
+    Compiles an overall operations recommendation using GenAI or a default message.
+    Why: Separates GenAI prompt generation details to keep the primary service entry point clean.
+    """
+    if has_congested_zone:
+        system_prompt = (
+            "You are a Stadium Operations Assistant. You review crowd status and provide "
+            "a single short, action-oriented overall recommendation for organizers and fans."
+        )
+        zones_summary = ", ".join(
+            [f"{z.name}: {z.density_level} ({z.density_pct}%)" for z in zones_status]
+        )
+        user_message = f"Here is the current stadium zone density: {zones_summary}. What is the overall recommendation?"
+
+        return genai_client.complete(
+            system_prompt=system_prompt, user_message=user_message, max_tokens=150
+        )
+    return "All zones operating within normal capacity limits. Standard egress patterns apply."
+
+
 def get_crowd_status(stadium_id: str) -> CrowdResponse:
     """
     Generates the current crowd status simulation for a stadium.
@@ -57,48 +115,16 @@ def get_crowd_status(stadium_id: str) -> CrowdResponse:
     """
     stadium = get_stadium(stadium_id)
     time_bucket = _get_minute_bucket()
-    
-    zones_status: List[ZoneStatus] = []
-    has_congested_zone = False
-    
-    for zone_name in stadium["zones"]:
-        zone_id = zone_name.strip().lower().replace(" ", "_")
-        pct = _generate_density_pct(stadium["id"], zone_name, time_bucket)
-        level = _get_density_level(pct)
-        
-        if level in ("high", "critical"):
-            has_congested_zone = True
-            
-        zones_status.append(ZoneStatus(
-            zone_id=zone_id,
-            name=zone_name,
-            density_level=level,
-            density_pct=pct,
-            recommendation=_get_zone_recommendation(level)
-        ))
-        
+
+    zones_status, has_congested_zone = _generate_zones_status(stadium, time_bucket)
+    overall_recommendation = _get_overall_recommendation(
+        zones_status, has_congested_zone
+    )
     generated_at = datetime.datetime.utcnow().isoformat() + "Z"
-    
-    # Efficiency rule: only hit GenAI when there's an actual incident (congested zone)
-    if has_congested_zone:
-        system_prompt = (
-            "You are a Stadium Operations Assistant. You review crowd status and provide "
-            "a single short, action-oriented overall recommendation for organizers and fans."
-        )
-        zones_summary = ", ".join([f"{z.name}: {z.density_level} ({z.density_pct}%)" for z in zones_status])
-        user_message = f"Here is the current stadium zone density: {zones_summary}. What is the overall recommendation?"
-        
-        overall_recommendation = genai_client.complete(
-            system_prompt=system_prompt,
-            user_message=user_message,
-            max_tokens=150
-        )
-    else:
-        overall_recommendation = "All zones operating within normal capacity limits. Standard egress patterns apply."
-        
+
     return CrowdResponse(
         stadium_id=stadium["id"],
         generated_at=generated_at,
         zones=zones_status,
-        overall_recommendation=overall_recommendation
+        overall_recommendation=overall_recommendation,
     )

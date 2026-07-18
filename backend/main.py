@@ -17,12 +17,18 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from backend.config import settings
 from backend.models import (
-    ChatRequest, ChatResponse, TranslateRequest, TranslateResponse,
-    CrowdResponse, TransportResponse, SustainabilityResponse, AccessibilityNeed
+    ChatRequest,
+    ChatResponse,
+    TranslateRequest,
+    TranslateResponse,
+    CrowdResponse,
+    TransportResponse,
+    SustainabilityResponse,
+    AccessibilityNeed,
 )
 from backend.data.stadium_data import get_all_stadiums
 from backend.genai_client import genai_client
-from backend.personas import build_system_prompt
+from backend.services.chat_service import get_chat_response
 from backend.services.crowd_service import get_crowd_status
 from backend.services.translate_service import translate
 from backend.services.transport_service import get_transport_options
@@ -39,7 +45,7 @@ app = FastAPI(
         "GenAI-powered Fan Journey Concierge assisting stadium attendees with "
         "crowd levels, navigation, transport, sustainability tips, and multilingual assistance."
     ),
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # CORS middleware setup (Restricted allow-list, never wildcard)
@@ -55,6 +61,7 @@ if settings.allowed_origins_list:
 else:
     logger.info("No CORS origins configured. Running on same-origin only.")
 
+
 # In-memory Rate Limiting Middleware for single-process demo runs
 class RateLimiterMiddleware(BaseHTTPMiddleware):
     """
@@ -62,6 +69,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
     Monitors /api/chat and /api/translate requests by client IP.
     Note: For production multi-process clusters, this must be refactored to use Redis.
     """
+
     def __init__(self, app: FastAPI, limit_per_minute: int):
         super().__init__(app)
         self.limit = limit_per_minute
@@ -73,25 +81,35 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         if path in ("/api/chat", "/api/translate"):
             client_ip = request.client.host if request.client else "unknown"
             now = time.time()
-            
+
             # Keep timestamps within the last 60 seconds
             if client_ip in self.requests:
-                self.requests[client_ip] = [t for t in self.requests[client_ip] if now - t < 60]
+                self.requests[client_ip] = [
+                    t for t in self.requests[client_ip] if now - t < 60
+                ]
             else:
                 self.requests[client_ip] = []
-                
+
             if len(self.requests[client_ip]) >= self.limit:
-                logger.warning(f"Rate limit exceeded for IP: {client_ip} on path: {path}")
+                logger.warning(
+                    f"Rate limit exceeded for IP: {client_ip} on path: {path}"
+                )
                 return JSONResponse(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    content={"detail": "Too many requests. Please wait a minute before trying again."}
+                    content={
+                        "detail": "Too many requests. Please wait a minute before trying again."
+                    },
                 )
-                
+
             self.requests[client_ip].append(now)
-            
+
         return await call_next(request)
 
-app.add_middleware(RateLimiterMiddleware, limit_per_minute=settings.rate_limit_per_minute)
+
+app.add_middleware(
+    RateLimiterMiddleware, limit_per_minute=settings.rate_limit_per_minute
+)
+
 
 # Global Exception Handler (prevents leaking stack traces or credentials in response payloads)
 @app.exception_handler(Exception)
@@ -99,90 +117,63 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     logger.exception(f"Unhandled error during request to {request.url.path}: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "An internal server error occurred. Please try again later."}
+        content={
+            "detail": "An internal server error occurred. Please try again later."
+        },
     )
 
+
 # --- API ROUTES ---
+
 
 @app.get("/api/health")
 async def get_health() -> dict:
     """Returns application status and the active GenAI mode (live or mock)."""
-    return {
-        "status": "ok",
-        "genai_mode": genai_client.mode
-    }
+    return {"status": "ok", "genai_mode": genai_client.mode}
+
 
 @app.get("/api/stadiums")
 async def get_stadiums() -> List[dict]:
     """Retrieves list of active World Cup stadiums for UI selector."""
     return get_all_stadiums()
 
+
 @app.get("/api/crowd/{stadium_id}")
 async def get_crowd(stadium_id: str) -> CrowdResponse:
     """Gets simulated real-time crowd densities for all concourses/zones."""
     return get_crowd_status(stadium_id)
 
+
 @app.post("/api/chat")
 async def post_chat(request: ChatRequest) -> ChatResponse:
     """
     Processes chat requests using the built persona prompts and context attributes.
-    Returns dynamic suggested action cards.
+    Delegates processing and suggested action generation to the chat service.
     """
-    system_prompt = build_system_prompt(request.context)
-    
-    # Securely call GenAI complete (free text goes ONLY in user message slot)
-    reply = genai_client.complete(
-        system_prompt=system_prompt,
-        user_message=request.message,
-        max_tokens=400
-    )
-    
-    # Suggested actions based on response content keyword matching (efficiency rule)
-    reply_lower = reply.lower()
-    suggested_actions = []
-    if any(kw in reply_lower for kw in ["transport", "metro", "bus", "shuttle", "uber", "rideshare", "walk", "lot"]):
-        suggested_actions.append("View Transport Options")
-    if any(kw in reply_lower for kw in ["food", "eat", "drink", "beer", "hungry", "concession", "snack"]):
-        suggested_actions.append("Locate Concessions")
-    if any(kw in reply_lower for kw in ["restroom", "toilet", "bathroom", "wc"]):
-        suggested_actions.append("Find Nearest Restroom")
-    if any(kw in reply_lower for kw in ["sustainability", "recycle", "water", "green", "trash", "environment"]):
-        suggested_actions.append("View Sustainability Tips")
-        
-    # Standard fallback actions
-    if not suggested_actions:
-        suggested_actions = ["Check Crowd Levels", "Find Near Exit"]
-    elif len(suggested_actions) < 2:
-        if "Check Crowd Levels" not in suggested_actions:
-            suggested_actions.append("Check Crowd Levels")
-        else:
-            suggested_actions.append("Find Near Exit")
+    return get_chat_response(request)
 
-    return ChatResponse(
-        reply=reply,
-        persona=request.context.persona,
-        mode=genai_client.mode,
-        suggested_actions=suggested_actions
-    )
 
 @app.post("/api/translate")
 async def post_translate(request: TranslateRequest) -> TranslateResponse:
     """Translates message text into the target language code."""
     return translate(request.text, request.target_lang)
 
+
 @app.get("/api/transport/{stadium_id}")
 async def get_transport(
     stadium_id: str,
     accessibility_need: AccessibilityNeed = "none",
-    minutes_to_kickoff: int | None = Query(None)
+    minutes_to_kickoff: int | None = Query(None),
 ) -> TransportResponse:
     """Returns local transport schedules with a personalized transit recommendation."""
     return get_transport_options(stadium_id, accessibility_need, minutes_to_kickoff)
+
 
 @app.get("/api/sustainability/{stadium_id}")
 async def get_sustainability(stadium_id: str) -> SustainabilityResponse:
     """Returns recycling spots and carbon reduction hints."""
     return get_sustainability_info(stadium_id)
+
 
 # --- STATIC FILES MOUNT ---
 # Static assets are mounted last so that custom API routes take precedence
