@@ -285,6 +285,16 @@ async function fetchCrowdStatus() {
                 hasAlert = true;
             }
             
+            let trendIcon = "➡️";
+            let trendText = "stable";
+            if (zone.trend === "rising") {
+                trendIcon = "📈";
+                trendText = "rising";
+            } else if (zone.trend === "falling") {
+                trendIcon = "📉";
+                trendText = "falling";
+            }
+
             row.innerHTML = `
                 <div class="flex justify-between items-center text-xs mb-1">
                     <span class="font-bold text-on-surface">${escapeHtml(zone.name)}</span>
@@ -297,7 +307,7 @@ async function fetchCrowdStatus() {
                     <div class="crowd-progress-fill ${zone.density_level}" style="width: ${zone.density_pct}%"></div>
                 </div>
                 <div class="text-[9px] text-on-surface-variant flex justify-between gap-2">
-                    <span>${zone.density_pct}% Density</span>
+                    <span>${zone.density_pct}% Density (${trendIcon} ${trendText})</span>
                     <span class="text-right truncate max-w-[150px]">${escapeHtml(zone.recommendation)}</span>
                 </div>
             `;

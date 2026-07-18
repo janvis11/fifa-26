@@ -55,6 +55,36 @@ def _get_zone_recommendation(level: DensityLevel) -> str:
         return "Critical bottleneck. Restrict movement and follow staff directions."
 
 
+def _calculate_trend_and_history(
+    stadium_id: str, zone_name: str
+) -> tuple[str, List[int]]:
+    """
+    Computes a deterministic historical trend (10m ago, 5m ago, now) for a zone.
+    Why: Provides operational intelligence trends without requiring a live database.
+    """
+    now = datetime.datetime.utcnow()
+    t_now = now.strftime("%Y-%m-%d %H:%M")
+    t_5 = (now - datetime.timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M")
+    t_10 = (now - datetime.timedelta(minutes=10)).strftime("%Y-%m-%d %H:%M")
+
+    pct_10 = _generate_density_pct(stadium_id, zone_name, t_10)
+    pct_5 = _generate_density_pct(stadium_id, zone_name, t_5)
+    pct_now = _generate_density_pct(stadium_id, zone_name, t_now)
+
+    history = [pct_10, pct_5, pct_now]
+
+    # Calculate trend direction
+    diff = pct_now - pct_10
+    if diff > 10:
+        trend = "rising"
+    elif diff < -10:
+        trend = "falling"
+    else:
+        trend = "stable"
+
+    return trend, history
+
+
 def _generate_zones_status(
     stadium: dict, time_bucket: str
 ) -> tuple[List[ZoneStatus], bool]:
@@ -69,6 +99,7 @@ def _generate_zones_status(
         zone_id = zone_name.strip().lower().replace(" ", "_")
         pct = _generate_density_pct(stadium["id"], zone_name, time_bucket)
         level = _get_density_level(pct)
+        trend, history = _calculate_trend_and_history(stadium["id"], zone_name)
 
         if level in ("high", "critical"):
             has_congested_zone = True
@@ -80,6 +111,8 @@ def _generate_zones_status(
                 density_level=level,
                 density_pct=pct,
                 recommendation=_get_zone_recommendation(level),
+                trend=trend,
+                recent_history=history,
             )
         )
     return zones_status, has_congested_zone

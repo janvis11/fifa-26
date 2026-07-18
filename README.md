@@ -7,14 +7,19 @@ The fan's match-day journey was chosen because it represents the highest-value t
 
 ## What it does
 
-The Fan Journey Concierge is a GenAI-powered web application assisting World Cup attendees and organizers. Key capabilities include:
-- **Navigation & Chat:** Interactive assistant answering questions on seating, restrooms, exits, and concessions.
-- **Crowd Awareness:** Simulates real-time concourse densities and alerts fans of bottleneck advisories.
-- **Accessibility:** First-class routing considerations for wheelchair, visual, cognitive, hearing, and elderly needs.
-- **Transport:** Simulates transit options (Metro, Shuttles, Walking, Rideshare) and gives Claude-driven travel recommendations.
-- **Sustainability:** Provides waste sorting instructions and free water refill locations.
-- **Multilingual:** Translates queries and replies into the user's preferred language.
-- **Ops Dashboard:** Secondary view giving stadium coordinators operational support and safety recommendations.
+The Fan Journey Concierge is a GenAI-powered web application assisting World Cup attendees and organizers. The system implements and demonstrates all **eight core capabilities** defined in the brief:
+
+| Capability | Backend Endpoint | Primary Logic Module | Frontend Component / Selector |
+| :--- | :--- | :--- | :--- |
+| **1. Navigation** | `POST /api/chat` | [chat_service.py](file:///d:/prompt_wars_4/backend/services/chat_service.py) | `#chat-section` (Concessions, restrooms, seating guidance) |
+| **2. Crowd Management** | `GET /api/crowd/{id}` | [crowd_service.py](file:///d:/prompt_wars_4/backend/services/crowd_service.py) | `#crowd-section` (Real-time simulated concourse density tracking) |
+| **3. Accessibility** | `POST /api/chat` (context-aware) | [personas.py](file:///d:/prompt_wars_4/backend/personas.py) & [genai_client.py](file:///d:/prompt_wars_4/backend/genai_client.py) | `#toggle-contrast` & `#select-accessibility` (ADA-safe routing/descriptions) |
+| **4. Transportation** | `GET /api/transport/{id}` | [transport_service.py](file:///d:/prompt_wars_4/backend/services/transport_service.py) | `#transport-options-list` (Kickoff-adjusted travel recommendations) |
+| **5. Sustainability** | `GET /api/sustainability/{id}` | [sustainability_service.py](file:///d:/prompt_wars_4/backend/services/sustainability_service.py) | `#nearest-recycling` & `#nearest-water` (Eco nudges & green tips) |
+| **6. Multilingual Assistance** | `POST /api/translate` | [translate_service.py](file:///d:/prompt_wars_4/backend/services/translate_service.py) | `#select-language` (Real-time query & response translation) |
+| **7. Operational Intelligence** | `GET /api/crowd/{id}` | `_calculate_trend_and_history` in [crowd_service.py](file:///d:/prompt_wars_4/backend/services/crowd_service.py) | Zone status density indicators (`📈 rising` / `📉 falling` / `➡️ stable` trends) |
+| **8. Real-time Decision Support** | `POST /api/chat` (organizer mode) | `is_organizer` logic in [genai_client.py](file:///d:/prompt_wars_4/backend/genai_client.py) | `#btn-report` (Generates staff reallocation and operational directives) |
+
 
 ## Architecture
 
