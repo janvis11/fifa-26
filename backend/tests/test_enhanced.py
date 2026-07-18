@@ -244,3 +244,11 @@ def test_translate_service_live_mode() -> None:
     finally:
         genai_client._mode = original_mode
         genai_client._client = original_client
+
+
+def test_security_headers_stripped() -> None:
+    """Asserts that framework/server identification headers are stripped from responses."""
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    assert "server" not in response.headers
+    assert "x-powered-by" not in response.headers

@@ -7,6 +7,7 @@ from backend.main import app
 
 client = TestClient(app)
 
+
 def test_health_check() -> None:
     """Asserts that the health endpoint returns OK and runs in mock mode by default."""
     response = client.get("/api/health")

@@ -21,3 +21,9 @@ Thumbs.db
 
 # Frontend dependency directories (if any)
 node_modules/
+
+# Testing / Coverage
+.coverage
+.pytest_cache/
+htmlcov/
+

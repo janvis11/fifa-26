@@ -111,6 +111,24 @@ app.add_middleware(
 )
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to strip sensitive response headers and enforce security parameters.
+    Why: Prevents fingerprinting by removing framework/server signatures (e.g., Server header).
+    """
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        if "server" in response.headers:
+            del response.headers["server"]
+        if "x-powered-by" in response.headers:
+            del response.headers["x-powered-by"]
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
 # Global Exception Handler (prevents leaking stack traces or credentials in response payloads)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:

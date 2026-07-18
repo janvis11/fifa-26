@@ -13,14 +13,14 @@ from dotenv import load_dotenv
 # Explicitly load .env file if it exists
 load_dotenv()
 
+
 class Settings(BaseSettings):
     """
     Application settings loaded from environment variables or a .env file.
     """
+
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     # API key for Anthropic Claude (can be None/empty for mock mode)
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     def genai_mode(self) -> str:
         """
         Determines the GenAI mode of the application.
-        
+
         Returns "live" if ANTHROPIC_API_KEY is configured, else "mock".
         This fallback guarantees that the application runs and demos successfully
         even in offline settings or without a configured API key.
@@ -56,8 +56,13 @@ class Settings(BaseSettings):
         """
         if not self.allowed_origins.strip():
             return []
-        return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+        return [
+            origin.strip()
+            for origin in self.allowed_origins.split(",")
+            if origin.strip()
+        ]
+
 
 # Singleton instance of settings to be imported and used across modules.
 settings = Settings()
-ClassSettingsType = Settings # For type hinting if needed
+ClassSettingsType = Settings  # For type hinting if needed

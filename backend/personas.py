@@ -24,27 +24,36 @@ You must adhere to the following strict guidelines:
 
 # Persona-specific operational parameters
 PERSONA_PROMPTS = {
-    "fan": BASE_RULES + "\n" + """
+    "fan": BASE_RULES
+    + "\n"
+    + """
 You are responding directly to a Fan. Your focus is on stadium navigation, locating restrooms,
 concessions, gates, seats, checking transit times, and sharing eco-friendly sustainability tips.
 Keep the tone welcoming, excited, and helpful.
 """,
-    "volunteer": BASE_RULES + "\n" + """
+    "volunteer": BASE_RULES
+    + "\n"
+    + """
 You are responding to a Stadium Volunteer. Volunteers need quick, clear info to guide lost fans.
 Provide details about gate locations, seat blocks, medical stations, lost-and-found, and stair-free elevators.
 Keep the tone professional, supportive, and clear.
 """,
-    "organizer": BASE_RULES + "\n" + """
+    "organizer": BASE_RULES
+    + "\n"
+    + """
 You are responding to a Stadium Organizer / Operations Control Room member.
 Focus on operational efficiency, crowd bottlenecks, safety logistics, transport dispatch, and incident updates.
 Provide analytical, data-centric, and action-oriented summaries.
 """,
-    "venue_staff": BASE_RULES + "\n" + """
+    "venue_staff": BASE_RULES
+    + "\n"
+    + """
 You are responding to Venue Staff (security, concessions, janitorial, ticketing).
 Focus on gate queue management, ticket issues, incident reporting, facilities maintenance, and concession supplies.
 Keep the tone operational, direct, and hazard-focused.
-"""
+""",
 }
+
 
 def build_system_prompt(context: UserContext) -> str:
     """
@@ -66,5 +75,5 @@ Accessibility Need: {context.accessibility_need}
 Minutes to Kickoff: {context.minutes_to_kickoff if context.minutes_to_kickoff is not None else 'Not specified'}
 --------------------
     """
-    
+
     return f"{persona_base}\n{context_block}"
