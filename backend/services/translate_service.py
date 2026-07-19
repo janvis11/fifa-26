@@ -20,7 +20,7 @@ PHRASEBOOK = {
         "es": "¿Cómo salgo del estadio?",
         "fr": "Comment sortir du stade?",
         "de": "Wie verlasse ich das Stadion?",
-        "pt": "Como faço para sair do estádio?",
+        "pt": "Onde fica a saída do estádio?",
     },
     "where can i find food?": {
         "es": "¿Dónde puedo encontrar comida?",
@@ -38,6 +38,39 @@ PHRASEBOOK = {
 }
 
 
+def _translate_live(text: str, normalized_lang: str) -> TranslateResponse:
+    """Performs live translation via Anthropic Claude API."""
+    system_prompt = (
+        "You are a professional translator. Translate the user's text into the target language "
+        f"code '{normalized_lang}'. Return ONLY the translated text, with no explanations, "
+        "no preamble, and no conversational filler."
+    )
+    translated_text = genai_client.complete(
+        system_prompt=system_prompt, user_message=text, max_tokens=500
+    )
+    return TranslateResponse(translated_text=translated_text.strip(), mode="live")
+
+
+def _translate_mock(
+    text: str, normalized_lang: str, normalized_text: str
+) -> TranslateResponse:
+    """Performs deterministic offline translation using curated PHRASEBOOK or placeholder fallback."""
+    lookup_key = (
+        normalized_text + "?"
+        if any(kw in normalized_text for kw in ("restroom", "exit", "food", "seat"))
+        else normalized_text
+    )
+
+    matched_dict = PHRASEBOOK.get(normalized_text) or PHRASEBOOK.get(lookup_key)
+    if matched_dict and normalized_lang in matched_dict:
+        return TranslateResponse(
+            translated_text=matched_dict[normalized_lang], mode="mock"
+        )
+
+    fallback_text = f"[{normalized_lang}] {text}"
+    return TranslateResponse(translated_text=fallback_text, mode="mock")
+
+
 def translate(text: str, target_lang: str) -> TranslateResponse:
     """
     Translates input text into the target language.
@@ -45,45 +78,12 @@ def translate(text: str, target_lang: str) -> TranslateResponse:
     In live mode, delegates to the Anthropic Claude API with a tightly scoped
     system prompt so the model only returns the translation (no preamble).
     In mock mode, checks a curated PHRASEBOOK of common stadium queries first,
-    then falls back to a bracketed placeholder so the caller always gets a
-    string — never a None or an error.
-
-    The user's raw text is passed exclusively in the `user` message slot to
-    prevent prompt-injection through the text content.
+    then falls back to a bracketed placeholder so the caller always gets a string.
     """
     normalized_lang = target_lang.strip().lower()
     normalized_text = text.strip().lower().rstrip(".?!")
 
-    # Check if we should use the live GenAI client
     if genai_client.mode == "live":
-        system_prompt = (
-            "You are a professional translator. Translate the user's text into the target language "
-            f"code '{normalized_lang}'. Return ONLY the translated text, with no explanations, "
-            "no preamble, and no conversational filler."
-        )
-        translated_text = genai_client.complete(
-            system_prompt=system_prompt, user_message=text, max_tokens=500
-        )
-        return TranslateResponse(translated_text=translated_text.strip(), mode="live")
-    else:
-        # Mock mode phrasebook lookup
-        # Clean up input text for matching
-        lookup_key = (
-            normalized_text + "?"
-            if "restroom" in normalized_text
-            or "exit" in normalized_text
-            or "food" in normalized_text
-            or "seat" in normalized_text
-            else normalized_text
-        )
+        return _translate_live(text, normalized_lang)
 
-        # Check phrasebook
-        matched_dict = PHRASEBOOK.get(normalized_text) or PHRASEBOOK.get(lookup_key)
-        if matched_dict and normalized_lang in matched_dict:
-            return TranslateResponse(
-                translated_text=matched_dict[normalized_lang], mode="mock"
-            )
-
-        # Fallback text if not matched
-        fallback_text = f"[{normalized_lang}] {text}"
-        return TranslateResponse(translated_text=fallback_text, mode="mock")
+    return _translate_mock(text, normalized_lang, normalized_text)

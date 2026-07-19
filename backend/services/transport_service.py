@@ -10,16 +10,9 @@ from backend.models import TransportResponse, TransportOption, AccessibilityNeed
 from backend.genai_client import genai_client
 
 
-def get_transport_options(
-    stadium_id: str,
-    accessibility_need: AccessibilityNeed = "none",
-    minutes_to_kickoff: int | None = None,
-) -> TransportResponse:
-    """
-    Returns available transit choices and computes the best recommendation via GenAI.
-    """
-    # Base simulated options
-    options = [
+def _get_default_options() -> list[TransportOption]:
+    """Returns baseline simulated transit options for stadium egress/ingress."""
+    return [
         TransportOption(
             mode="Metro Rail",
             eta_minutes=10,
@@ -46,13 +39,39 @@ def get_transport_options(
         ),
     ]
 
-    # System prompt for GenAI recommendation
+
+def _get_mock_transport_recommendation(
+    accessibility_need: AccessibilityNeed,
+    minutes_to_kickoff: int | None,
+) -> str:
+    """Provides deterministic rule-based recommendations when running in offline/mock mode."""
+    if accessibility_need == "wheelchair":
+        return (
+            "The Express Shuttle (Lot C) is recommended. It features specialized ADA-compliant ramps, "
+            "lower boarding heights, and direct drops to the main gate with zero stairways."
+        )
+    if minutes_to_kickoff is not None and minutes_to_kickoff < 30:
+        return (
+            "The Metro Rail is the fastest choice to reach the gate before kickoff (10 minutes wait time). "
+            "Avoid the rideshare zone as traffic lines are highly congested."
+        )
+    return (
+        "The Metro Rail is recommended as the most efficient and reliable public transit option. "
+        "It is a short walk from Gate A and runs on dedicated tracks away from road traffic."
+    )
+
+
+def _generate_transport_recommendation(
+    options: list[TransportOption],
+    accessibility_need: AccessibilityNeed,
+    minutes_to_kickoff: int | None,
+) -> str:
+    """Orchestrates GenAI recommendation generation with fallback to deterministic rules."""
     system_prompt = (
         "You are a Stadium Transport Coordinator. Review the available transit options and the fan's context "
         "to suggest the single best transport option. Be concise (2 sentences max)."
     )
 
-    # Build context message for user query
     context_str = f"Accessibility Need: {accessibility_need}. "
     if minutes_to_kickoff is not None:
         context_str += f"Time to Kickoff: {minutes_to_kickoff} minutes. "
@@ -68,30 +87,30 @@ def get_transport_options(
 
     user_message = f"User Context: {context_str}. Available options: {options_summary}. What is the best transit recommendation?"
 
-    # GenAI call with mock fallback
     recommendation = genai_client.complete(
         system_prompt=system_prompt, user_message=user_message, max_tokens=150
     )
 
-    # If using mock fallback, write custom rules matching accessibility
     if genai_client.mode == "mock":
-        # Provide specialized mock answers based on rules
-        if accessibility_need == "wheelchair":
-            recommendation = (
-                "The Express Shuttle (Lot C) is recommended. It features specialized ADA-compliant ramps, "
-                "lower boarding heights, and direct drops to the main gate with zero stairways."
-            )
-        elif minutes_to_kickoff is not None and minutes_to_kickoff < 30:
-            recommendation = (
-                "The Metro Rail is the fastest choice to reach the gate before kickoff (10 minutes wait time). "
-                "Avoid the rideshare zone as traffic lines are highly congested."
-            )
-        else:
-            recommendation = (
-                "The Metro Rail is recommended as the most efficient and reliable public transit option. "
-                "It is a short walk from Gate A and runs on dedicated tracks away from road traffic."
-            )
+        return _get_mock_transport_recommendation(
+            accessibility_need, minutes_to_kickoff
+        )
 
+    return recommendation
+
+
+def get_transport_options(
+    _stadium_id: str,
+    accessibility_need: AccessibilityNeed = "none",
+    minutes_to_kickoff: int | None = None,
+) -> TransportResponse:
+    """
+    Returns available transit choices and computes the best recommendation via GenAI.
+    """
+    options = _get_default_options()
+    recommendation = _generate_transport_recommendation(
+        options, accessibility_need, minutes_to_kickoff
+    )
     generated_at = datetime.datetime.now(datetime.UTC).isoformat() + "Z"
 
     return TransportResponse(

@@ -72,6 +72,51 @@ _FAN_SUFFIX: dict[str, str] = {
 }
 
 
+# Specialized responses keyed by role/persona for offline/mock mode.
+_ROLE_RESPONSES: dict[str, dict[str, str]] = {
+    "organizer": {
+        "restroom": "Concourse A restroom queue exceeds 15 minutes. ACTION: Dispatch 2 guest marshals to redirect crowd to Concourse B restrooms immediately.",
+        "exit": "Egress congestion building at Gate B. DECISION SUPPORT: Open secondary emergency exit doors and deploy 3 security officers to West Plaza.",
+        "food": "Concourse concession stands show a 20-minute bottleneck. ACTION: Instruct vendor to open additional POS terminals at Stand 12.",
+        "seat": "Section 114 reporting heavy seating block traffic. DECISION: Deploy 2 customer assistance volunteers to Section 114 entrance tunnel.",
+        "transport": "Metro station queue wait time is 25 minutes. DECISION SUPPORT: Dispatch 2 extra standby shuttle buses to Lot C to relieve crowd pressure.",
+        "sustain": "Recycling station bins at West Plaza are 90% full. ACTION: Direct janitorial staff to replace bins at West Plaza immediately.",
+    },
+    "wheelchair": {
+        "restroom": "Step-free, accessible restrooms are located directly on the main concourse near Section 112 (left of the entrance ramp).",
+        "exit": "Step-free exit routes and ADA ramps are located at Gate A and Gate C. Elevators are available adjacent to the main ticketing concourse.",
+        "food": "Accessible lower-counter concessions are available at Section 105 (Burger Grill) and Section 120 (Taco Stand), both have ramp access.",
+        "seat": "Your wheelchair-accessible seating platform is in Section 114, Row W. Follow the ramp on the left.",
+        "transport": "ADA-compliant shuttle buses depart from Lot C every 10 minutes. Accessible rideshare pickup is at Gate 2.",
+        "sustain": "Accessible recycling bins and water bottle refill stations are located at Section 108 next to the elevator.",
+    },
+    "visual": {
+        "restroom": "Restrooms are located 50 feet ahead on your left, past the concession stand at Section 112. The door has tactile braille signs.",
+        "exit": "The nearest exit is Gate A, located straight ahead for 150 yards from the Section 101 corridor.",
+        "food": "Concessions are 30 yards to the right. Stands include Section 105 (Burger Grill) and Section 120 (Taco Stand).",
+        "seat": "To find Section 114, locate the Section 112 marker on your left, then walk 20 paces forward.",
+        "transport": "Metro station entrance is 200 yards directly east of the main gate. Accessible shuttle buses are parked in Lot C to the north-east.",
+        "sustain": "A water refill station is 10 paces past Section 108 on the right side wall.",
+    },
+    "cognitive": {
+        "restroom": "Restrooms are at Section 112. They are easy to find and have large signs.",
+        "exit": "Exits are at Gate A. Just follow the green exit signs.",
+        "food": "Food stands are at Section 105 and Section 120. They sell burgers, hotdogs, and water.",
+        "seat": "Go to Section 114. Look for the blue seat signs. Staff in yellow shirts can help you.",
+        "transport": "Buses are in Lot C. The Metro is nearby. Both are safe and clean.",
+        "sustain": "Recycle bottles in the blue bins. Water stations are near Section 108.",
+    },
+    "default": {
+        "restroom": "Restrooms are located on the main concourse near Sections 112 and 131.",
+        "exit": "Exits are located at Gate A (North), Gate B (East), and Gate C (South).",
+        "food": "Concession stands are located throughout the concourse. Popular options include the Burger Grill at Section 105 and Taco Stand at Section 120.",
+        "seat": "Please look at the directional signage on the concourse walls. Section numbers are clearly marked above the seating entry tunnels.",
+        "transport": "The Metro station is a 5-minute walk from Gate A. Shuttle buses are located in Lot C. Rideshare pickup is at Gate 2.",
+        "sustain": "Please use the blue recycling bins located at every section entrance. Water refill stations are available near Section 108 and 124.",
+    },
+}
+
+
 class GenAIClient:
     """
     Singleton wrapper for the Anthropic API client.
@@ -145,55 +190,20 @@ class GenAIClient:
         """
         Builds a topic → response-string mapping for the active user role.
 
-        Why a dict rather than separate variables: it lets _select_response()
-        look up any topic by name without knowing the role, keeping the two
-        responsibilities cleanly separated.
+        Why a dict lookup: keeps the method under 15 lines and avoids multi-branch boilerplate.
         """
         if is_organizer:
-            return {
-                "restroom": "Concourse A restroom queue exceeds 15 minutes. ACTION: Dispatch 2 guest marshals to redirect crowd to Concourse B restrooms immediately.",
-                "exit": "Egress congestion building at Gate B. DECISION SUPPORT: Open secondary emergency exit doors and deploy 3 security officers to West Plaza.",
-                "food": "Concourse concession stands show a 20-minute bottleneck. ACTION: Instruct vendor to open additional POS terminals at Stand 12.",
-                "seat": "Section 114 reporting heavy seating block traffic. DECISION: Deploy 2 customer assistance volunteers to Section 114 entrance tunnel.",
-                "transport": "Metro station queue wait time is 25 minutes. DECISION SUPPORT: Dispatch 2 extra standby shuttle buses to Lot C to relieve crowd pressure.",
-                "sustain": "Recycling station bins at West Plaza are 90% full. ACTION: Direct janitorial staff to replace bins at West Plaza immediately.",
-            }
-        if is_wheelchair:
-            return {
-                "restroom": "Step-free, accessible restrooms are located directly on the main concourse near Section 112 (left of the entrance ramp).",
-                "exit": "Step-free exit routes and ADA ramps are located at Gate A and Gate C. Elevators are available adjacent to the main ticketing concourse.",
-                "food": "Accessible lower-counter concessions are available at Section 105 (Burger Grill) and Section 120 (Taco Stand), both have ramp access.",
-                "seat": "Your wheelchair-accessible seating platform is in Section 114, Row W. Follow the ramp on the left.",
-                "transport": "ADA-compliant shuttle buses depart from Lot C every 10 minutes. Accessible rideshare pickup is at Gate 2.",
-                "sustain": "Accessible recycling bins and water bottle refill stations are located at Section 108 next to the elevator.",
-            }
-        if is_visual:
-            return {
-                "restroom": "Restrooms are located 50 feet ahead on your left, past the concession stand at Section 112. The door has tactile braille signs.",
-                "exit": "The nearest exit is Gate A, located straight ahead for 150 yards from the Section 101 corridor.",
-                "food": "Concessions are 30 yards to the right. Stands include Section 105 (Burger Grill) and Section 120 (Taco Stand).",
-                "seat": "To find Section 114, locate the Section 112 marker on your left, then walk 20 paces forward.",
-                "transport": "Metro station entrance is 200 yards directly east of the main gate. Accessible shuttle buses are parked in Lot C to the north-east.",
-                "sustain": "A water refill station is 10 paces past Section 108 on the right side wall.",
-            }
-        if is_cognitive:
-            return {
-                "restroom": "Restrooms are at Section 112. They are easy to find and have large signs.",
-                "exit": "Exits are at Gate A. Just follow the green exit signs.",
-                "food": "Food stands are at Section 105 and Section 120. They sell burgers, hotdogs, and water.",
-                "seat": "Go to Section 114. Look for the blue seat signs. Staff in yellow shirts can help you.",
-                "transport": "Buses are in Lot C. The Metro is nearby. Both are safe and clean.",
-                "sustain": "Recycle bottles in the blue bins. Water stations are near Section 108.",
-            }
-        # Default: standard fan response
-        return {
-            "restroom": "Restrooms are located on the main concourse near Sections 112 and 131.",
-            "exit": "Exits are located at Gate A (North), Gate B (East), and Gate C (South).",
-            "food": "Concession stands are located throughout the concourse. Popular options include the Burger Grill at Section 105 and Taco Stand at Section 120.",
-            "seat": "Please look at the directional signage on the concourse walls. Section numbers are clearly marked above the seating entry tunnels.",
-            "transport": "The Metro station is a 5-minute walk from Gate A. Shuttle buses are located in Lot C. Rideshare pickup is at Gate 2.",
-            "sustain": "Please use the blue recycling bins located at every section entrance. Water refill stations are available near Section 108 and 124.",
-        }
+            role_key = "organizer"
+        elif is_wheelchair:
+            role_key = "wheelchair"
+        elif is_visual:
+            role_key = "visual"
+        elif is_cognitive:
+            role_key = "cognitive"
+        else:
+            role_key = "default"
+
+        return _ROLE_RESPONSES[role_key]
 
     def _select_response(
         self, msg: str, tips: dict[str, str], is_organizer: bool
