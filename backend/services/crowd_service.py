@@ -7,7 +7,6 @@ and requests a GenAI recommendation for operations when bottlenecks exist.
 
 import datetime
 import hashlib
-from typing import List
 from backend.models import CrowdResponse, ZoneStatus, DensityLevel
 from backend.data.stadium_data import get_stadium
 from backend.genai_client import genai_client
@@ -57,7 +56,7 @@ def _get_zone_recommendation(level: DensityLevel) -> str:
 
 def _calculate_trend_and_history(
     stadium_id: str, zone_name: str
-) -> tuple[str, List[int]]:
+) -> tuple[str, list[int]]:
     """
     Computes a deterministic historical trend (10m ago, 5m ago, now) for a zone.
     Why: Provides operational intelligence trends without requiring a live database.
@@ -87,12 +86,12 @@ def _calculate_trend_and_history(
 
 def _generate_zones_status(
     stadium: dict, time_bucket: str
-) -> tuple[List[ZoneStatus], bool]:
+) -> tuple[list[ZoneStatus], bool]:
     """
     Simulates crowd status for all stadium zones and checks if any zone is congested.
     Why: Keeps zone loop logic separated from prompt construction for better readability.
     """
-    zones_status: List[ZoneStatus] = []
+    zones_status: list[ZoneStatus] = []
     has_congested_zone = False
 
     for zone_name in stadium["zones"]:
@@ -119,7 +118,7 @@ def _generate_zones_status(
 
 
 def _get_overall_recommendation(
-    zones_status: List[ZoneStatus], has_congested_zone: bool
+    zones_status: list[ZoneStatus], has_congested_zone: bool
 ) -> str:
     """
     Compiles an overall operations recommendation using GenAI or a default message.

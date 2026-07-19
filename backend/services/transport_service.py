@@ -6,7 +6,6 @@ based on the user's accessibility need and the time left to kickoff.
 """
 
 import datetime
-from typing import Optional
 from backend.models import TransportResponse, TransportOption, AccessibilityNeed
 from backend.genai_client import genai_client
 
@@ -14,7 +13,7 @@ from backend.genai_client import genai_client
 def get_transport_options(
     stadium_id: str,
     accessibility_need: AccessibilityNeed = "none",
-    minutes_to_kickoff: Optional[int] = None,
+    minutes_to_kickoff: int | None = None,
 ) -> TransportResponse:
     """
     Returns available transit choices and computes the best recommendation via GenAI.

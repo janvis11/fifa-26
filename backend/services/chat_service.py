@@ -5,7 +5,6 @@ Handles building the system prompt from the user context, calling the GenAI clie
 and generating dynamic suggested action cards based on the reply text.
 """
 
-from typing import List
 from backend.models import ChatRequest, ChatResponse
 from backend.genai_client import genai_client
 from backend.personas import build_system_prompt
@@ -26,7 +25,7 @@ def get_chat_response(request: ChatRequest) -> ChatResponse:
 
     # Suggested actions based on response content keyword matching (efficiency rule)
     reply_lower = reply.lower()
-    suggested_actions: List[str] = []
+    suggested_actions: list[str] = []
 
     if any(
         kw in reply_lower

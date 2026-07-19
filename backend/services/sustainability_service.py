@@ -11,8 +11,12 @@ from backend.data.stadium_data import get_stadium
 
 def get_sustainability_info(stadium_id: str) -> SustainabilityResponse:
     """
-    Computes nearest recycling points and eco-tips based on the stadium's zones.
-    Operates entirely locally without GenAI requests.
+    Returns nearest recycling points and eco-tips for the given stadium.
+
+    Deliberately avoids any GenAI API call: sustainability tips are static
+    and deterministic, so calling the model would add latency and cost with
+    zero benefit. Zone list indices are used to select locations so the
+    result varies by stadium without hardcoding per-stadium values.
     """
     stadium = get_stadium(stadium_id)
     zones = stadium["zones"]

@@ -8,7 +8,6 @@ to serve the frontend. Implements global error handling to secure internal state
 import logging
 import os
 import time
-from typing import List, Dict
 from fastapi import FastAPI, Request, Response, status, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -74,7 +73,7 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.limit = limit_per_minute
         # Maps IP -> list of timestamps
-        self.requests: Dict[str, List[float]] = {}
+        self.requests: dict[str, list[float]] = {}
 
     async def dispatch(self, request: Request, call_next) -> Response:
         path = request.url.path
@@ -151,7 +150,7 @@ async def get_health() -> dict:
 
 
 @app.get("/api/stadiums")
-async def get_stadiums() -> List[dict]:
+async def get_stadiums() -> list[dict]:
     """Retrieves list of active World Cup stadiums for UI selector."""
     return get_all_stadiums()
 

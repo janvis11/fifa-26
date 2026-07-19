@@ -5,7 +5,7 @@ Defines Pydantic schemas for request validation and response serialization.
 Ensure strict type hints and length limits are applied to prevent unsafe inputs.
 """
 
-from typing import List, Literal, Optional
+from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 # Enums defined using Literal as requested in the prompts
@@ -32,8 +32,8 @@ class UserContext(BaseModel):
         max_length=50,
         description="The unique identifier of the stadium.",
     )
-    gate: Optional[str] = Field(None, max_length=20, description="Optional entry gate.")
-    seat_section: Optional[str] = Field(
+    gate: str | None = Field(None, max_length=20, description="Optional entry gate.")
+    seat_section: str | None = Field(
         None, max_length=20, description="Optional seating section."
     )
     language: str = Field(
@@ -45,7 +45,7 @@ class UserContext(BaseModel):
     accessibility_need: AccessibilityNeed = Field(
         "none", description="Accessibility accommodations requested."
     )
-    minutes_to_kickoff: Optional[int] = Field(
+    minutes_to_kickoff: int | None = Field(
         None, ge=-180, le=360, description="Remaining minutes until match kickoff."
     )
 
@@ -81,7 +81,7 @@ class ChatResponse(BaseModel):
     reply: str = Field(..., description="The assistant's text response.")
     persona: Persona = Field(..., description="The persona the assistant responded as.")
     mode: str = Field(..., description="The processing mode (live or mock).")
-    suggested_actions: List[str] = Field(
+    suggested_actions: list[str] = Field(
         default_factory=list, description="Context-aware quick actions."
     )
 
@@ -89,6 +89,10 @@ class ChatResponse(BaseModel):
 class TranslateRequest(BaseModel):
     """
     Schema for translation requests.
+
+    The 5000-character cap on `text` prevents runaway GenAI token usage;
+    `target_lang` is validated to alphanumeric-only to block injection
+    attempts via the language-code slot in the system prompt.
     """
 
     text: str = Field(
@@ -110,6 +114,10 @@ class TranslateRequest(BaseModel):
 class TranslateResponse(BaseModel):
     """
     Schema for translation responses.
+
+    The `mode` field lets the frontend display a subtle indicator when
+    the response is a phrasebook fallback rather than a live GenAI result,
+    so users understand they may receive a pre-canned phrase.
     """
 
     translated_text: str = Field(..., description="The translated text content.")
@@ -137,7 +145,7 @@ class ZoneStatus(BaseModel):
         default="stable",
         description="Trend direction over the last 10 minutes (rising, falling, stable).",
     )
-    recent_history: List[int] = Field(
+    recent_history: list[int] = Field(
         default_factory=list,
         description="Historical density percentages at [-10m, -5m, now].",
     )
@@ -152,7 +160,7 @@ class CrowdResponse(BaseModel):
     generated_at: str = Field(
         ..., description="ISO 8601 timestamp of simulation generation."
     )
-    zones: List[ZoneStatus] = Field(
+    zones: list[ZoneStatus] = Field(
         ..., description="List of stadium zones with statuses."
     )
     overall_recommendation: str = Field(
@@ -180,7 +188,7 @@ class TransportResponse(BaseModel):
     Response schema returning available transport options and recommendations.
     """
 
-    options: List[TransportOption] = Field(
+    options: list[TransportOption] = Field(
         ..., description="List of available transport choices."
     )
     recommendation: str = Field(
@@ -195,7 +203,7 @@ class SustainabilityResponse(BaseModel):
     Sustainability tips and eco-friendly features near the user.
     """
 
-    tips: List[str] = Field(
+    tips: list[str] = Field(
         ..., description="List of personalized sustainability tips."
     )
     nearest_recycling_zone: str = Field(

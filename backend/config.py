@@ -17,6 +17,12 @@ load_dotenv()
 class Settings(BaseSettings):
     """
     Application settings loaded from environment variables or a .env file.
+
+    Uses pydantic-settings so that every field can be overridden by a
+    matching environment variable at deploy time without code changes.
+    The class provides a computed `genai_mode` property so the rest of the
+    application only ever asks "am I live or mock?" — they never inspect
+    the raw API key, keeping the key out of all non-config modules.
     """
 
     model_config = SettingsConfigDict(
@@ -65,4 +71,3 @@ class Settings(BaseSettings):
 
 # Singleton instance of settings to be imported and used across modules.
 settings = Settings()
-ClassSettingsType = Settings  # For type hinting if needed

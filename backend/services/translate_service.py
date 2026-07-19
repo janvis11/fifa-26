@@ -41,7 +41,15 @@ PHRASEBOOK = {
 def translate(text: str, target_lang: str) -> TranslateResponse:
     """
     Translates input text into the target language.
-    Uses Anthropic in live mode and a phrasebook/placeholder logic in mock mode.
+
+    In live mode, delegates to the Anthropic Claude API with a tightly scoped
+    system prompt so the model only returns the translation (no preamble).
+    In mock mode, checks a curated PHRASEBOOK of common stadium queries first,
+    then falls back to a bracketed placeholder so the caller always gets a
+    string — never a None or an error.
+
+    The user's raw text is passed exclusively in the `user` message slot to
+    prevent prompt-injection through the text content.
     """
     normalized_lang = target_lang.strip().lower()
     normalized_text = text.strip().lower().rstrip(".?!")

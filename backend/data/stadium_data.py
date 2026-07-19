@@ -5,10 +5,10 @@ Contains information about the host stadiums for the FIFA World Cup 2026,
 including names, locations, and active zones. Provides a safe retrieval helper.
 """
 
-from typing import Dict, Any, List
+from typing import Any
 
 # Static dictionary of FIFA World Cup 2026 host stadiums
-STADIUMS: Dict[str, Dict[str, Any]] = {
+STADIUMS: dict[str, dict[str, Any]] = {
     "metlife": {
         "id": "metlife",
         "name": "MetLife Stadium",
@@ -64,7 +64,7 @@ STADIUMS: Dict[str, Dict[str, Any]] = {
 DEFAULT_STADIUM_ID = "metlife"
 
 
-def get_stadium(stadium_id: str | None) -> Dict[str, Any]:
+def get_stadium(stadium_id: str | None) -> dict[str, Any]:
     """
     Retrieves stadium configuration details by its ID.
 
@@ -78,7 +78,7 @@ def get_stadium(stadium_id: str | None) -> Dict[str, Any]:
     return STADIUMS.get(normalized_id, STADIUMS[DEFAULT_STADIUM_ID])
 
 
-def get_all_stadiums() -> List[Dict[str, str]]:
+def get_all_stadiums() -> list[dict[str, str]]:
     """
     Returns a list of all supported stadiums with their ID, name, and city.
     Useful for populating dropdown selections in the UI.

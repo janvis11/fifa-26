@@ -75,18 +75,164 @@ class GenAIClient:
         else:
             return self._mock_complete(system_prompt, user_message)
 
+    def _build_role_responses(
+        self,
+        is_organizer: bool,
+        is_wheelchair: bool,
+        is_visual: bool,
+        is_cognitive: bool,
+    ) -> dict[str, str]:
+        """
+        Builds a topic → response-string mapping for the active user role.
+
+        Why a dict rather than separate variables: it lets _select_response()
+        look up any topic by name without knowing the role, keeping the two
+        responsibilities cleanly separated.
+        """
+        if is_organizer:
+            return {
+                "restroom": "Concourse A restroom queue exceeds 15 minutes. ACTION: Dispatch 2 guest marshals to redirect crowd to Concourse B restrooms immediately.",
+                "exit": "Egress congestion building at Gate B. DECISION SUPPORT: Open secondary emergency exit doors and deploy 3 security officers to West Plaza.",
+                "food": "Concourse concession stands show a 20-minute bottleneck. ACTION: Instruct vendor to open additional POS terminals at Stand 12.",
+                "seat": "Section 114 reporting heavy seating block traffic. DECISION: Deploy 2 customer assistance volunteers to Section 114 entrance tunnel.",
+                "transport": "Metro station queue wait time is 25 minutes. DECISION SUPPORT: Dispatch 2 extra standby shuttle buses to Lot C to relieve crowd pressure.",
+                "sustain": "Recycling station bins at West Plaza are 90% full. ACTION: Direct janitorial staff to replace bins at West Plaza immediately.",
+            }
+        if is_wheelchair:
+            return {
+                "restroom": "Step-free, accessible restrooms are located directly on the main concourse near Section 112 (left of the entrance ramp).",
+                "exit": "Step-free exit routes and ADA ramps are located at Gate A and Gate C. Elevators are available adjacent to the main ticketing concourse.",
+                "food": "Accessible lower-counter concessions are available at Section 105 (Burger Grill) and Section 120 (Taco Stand), both have ramp access.",
+                "seat": "Your wheelchair-accessible seating platform is in Section 114, Row W. Follow the ramp on the left.",
+                "transport": "ADA-compliant shuttle buses depart from Lot C every 10 minutes. Accessible rideshare pickup is at Gate 2.",
+                "sustain": "Accessible recycling bins and water bottle refill stations are located at Section 108 next to the elevator.",
+            }
+        if is_visual:
+            return {
+                "restroom": "Restrooms are located 50 feet ahead on your left, past the concession stand at Section 112. The door has tactile braille signs.",
+                "exit": "The nearest exit is Gate A, located straight ahead for 150 yards from the Section 101 corridor.",
+                "food": "Concessions are 30 yards to the right. Stands include Section 105 (Burger Grill) and Section 120 (Taco Stand).",
+                "seat": "To find Section 114, locate the Section 112 marker on your left, then walk 20 paces forward.",
+                "transport": "Metro station entrance is 200 yards directly east of the main gate. Accessible shuttle buses are parked in Lot C to the north-east.",
+                "sustain": "A water refill station is 10 paces past Section 108 on the right side wall.",
+            }
+        if is_cognitive:
+            return {
+                "restroom": "Restrooms are at Section 112. They are easy to find and have large signs.",
+                "exit": "Exits are at Gate A. Just follow the green exit signs.",
+                "food": "Food stands are at Section 105 and Section 120. They sell burgers, hotdogs, and water.",
+                "seat": "Go to Section 114. Look for the blue seat signs. Staff in yellow shirts can help you.",
+                "transport": "Buses are in Lot C. The Metro is nearby. Both are safe and clean.",
+                "sustain": "Recycle bottles in the blue bins. Water stations are near Section 108.",
+            }
+        # Default: standard fan response
+        return {
+            "restroom": "Restrooms are located on the main concourse near Sections 112 and 131.",
+            "exit": "Exits are located at Gate A (North), Gate B (East), and Gate C (South).",
+            "food": "Concession stands are located throughout the concourse. Popular options include the Burger Grill at Section 105 and Taco Stand at Section 120.",
+            "seat": "Please look at the directional signage on the concourse walls. Section numbers are clearly marked above the seating entry tunnels.",
+            "transport": "The Metro station is a 5-minute walk from Gate A. Shuttle buses are located in Lot C. Rideshare pickup is at Gate 2.",
+            "sustain": "Please use the blue recycling bins located at every section entrance. Water refill stations are available near Section 108 and 124.",
+        }
+
+    def _select_response(
+        self, msg: str, tips: dict[str, str], is_organizer: bool
+    ) -> str | None:
+        """
+        Matches keywords in the user message to a topic and returns the reply.
+
+        Returns None when no keyword matches, so _mock_complete can fall
+        through to the generic greeting without duplicating that logic here.
+        """
+        prefix = {
+            "restroom": ("Operations Alert: " if is_organizer else ""),
+            "exit": ("Logistics Alert: " if is_organizer else ""),
+            "food": ("Concessions Advisory: " if is_organizer else "Hungry? "),
+            "seat": ("Seating Advisory: " if is_organizer else ""),
+            "transport": (
+                "Transit Command: " if is_organizer else "Here is the transport info: "
+            ),
+            "sustain": ("Sustainability Status: " if is_organizer else "Eco Nudge: "),
+        }
+        suffix = {
+            "restroom": ""
+            if is_organizer
+            else " Please let me know if you need help finding anything else.",
+            "exit": ""
+            if is_organizer
+            else " Thank you for visiting the stadium today!",
+            "food": ""
+            if is_organizer
+            else " Soft drinks and water are also sold there.",
+            "seat": ""
+            if is_organizer
+            else " Volunteers in yellow vests are standing by to guide you.",
+            "transport": "" if is_organizer else " Expect moderate post-match delays.",
+            "sustain": ""
+            if is_organizer
+            else " Help us keep the FIFA World Cup 2026 green!",
+        }
+
+        keyword_map: list[tuple[str, list[str]]] = [
+            ("restroom", ["restroom", "toilet", "bathroom", "wc"]),
+            ("exit", ["exit", "gate", "leave", "out"]),
+            (
+                "food",
+                ["food", "eat", "drink", "beer", "hungry", "thirsty", "concession"],
+            ),
+            ("seat", ["seat", "section", "find", "where is my", "where's my"]),
+            (
+                "transport",
+                [
+                    "transport",
+                    "metro",
+                    "bus",
+                    "shuttle",
+                    "uber",
+                    "rideshare",
+                    "park",
+                    "car",
+                ],
+            ),
+            (
+                "sustain",
+                ["sustainability", "recycle", "water", "green", "trash", "environment"],
+            ),
+        ]
+
+        for topic, keywords in keyword_map:
+            if any(kw in msg for kw in keywords):
+                return f"{prefix[topic]}{tips[topic]}{suffix[topic]}"
+
+        # Accessibility keyword catch-all
+        accessibility_keywords = [
+            "accessibility",
+            "wheelchair",
+            "step-free",
+            "elevator",
+            "ramp",
+        ]
+        if any(kw in msg for kw in accessibility_keywords):
+            label = (
+                "Accessibility Incident Report: "
+                if is_organizer
+                else "Accessibility Guidance: "
+            )
+            return f"{label}{tips['exit']} {tips['restroom']}"
+
+        return None
+
     def _mock_complete(self, system_prompt: str, user_message: str) -> str:
         """
         A deterministic, keyword-matching rule-based fallback.
 
         This method serves as a reliable safety net for offline runs, local testing,
-        and live demo fail-safes. It customizes replies depending on accessibility preferences
-        parsed from the system prompt.
+        and live demo fail-safes. It customizes replies depending on accessibility
+        preferences parsed from the system prompt.
         """
         msg = user_message.lower()
         sys = system_prompt.lower()
 
-        # Determine accessibility or role constraints from system prompt context
         is_organizer = (
             "organizer" in sys or "operations control" in sys or "organizer" in msg
         )
@@ -94,122 +240,14 @@ class GenAIClient:
         is_visual = "visual" in sys or "visual" in msg
         is_cognitive = "cognitive" in sys or "cognitive" in msg
 
-        # Customize responses based on accessibility requirements or organizer roles
-        if is_organizer:
-            restroom_tip = "Concourse A restroom queue exceeds 15 minutes. ACTION: Dispatch 2 guest marshals to redirect crowd to Concourse B restrooms immediately."
-            exit_tip = "Egress congestion building at Gate B. DECISION SUPPORT: Open secondary emergency exit doors and deploy 3 security officers to West Plaza."
-            food_tip = "Concourse concession stands show a 20-minute bottleneck. ACTION: Instruct vendor to open additional POS terminals at Stand 12."
-            seat_tip = "Section 114 reporting heavy seating block traffic. DECISION: Deploy 2 customer assistance volunteers to Section 114 entrance tunnel."
-            transport_tip = "Metro station queue wait time is 25 minutes. DECISION SUPPORT: Dispatch 2 extra standby shuttle buses to Lot C to relieve crowd pressure."
-            sustain_tip = "Recycling station bins at West Plaza are 90% full. ACTION: Direct janitorial staff to replace bins at West Plaza immediately."
-        elif is_wheelchair:
-            restroom_tip = "Step-free, accessible restrooms are located directly on the main concourse near Section 112 (left of the entrance ramp)."
-            exit_tip = "Step-free exit routes and ADA ramps are located at Gate A and Gate C. Elevators are available adjacent to the main ticketing concourse."
-            food_tip = "Accessible lower-counter concessions are available at Section 105 (Burger Grill) and Section 120 (Taco Stand), both have ramp access."
-            seat_tip = "Your wheelchair-accessible seating platform is in Section 114, Row W. Follow the ramp on the left."
-            transport_tip = "ADA-compliant shuttle buses depart from Lot C every 10 minutes. Accessible rideshare pickup is at Gate 2."
-            sustain_tip = "Accessible recycling bins and water bottle refill stations are located at Section 108 next to the elevator."
-        elif is_visual:
-            restroom_tip = "Restrooms are located 50 feet ahead on your left, past the concession stand at Section 112. The door has tactile braille signs."
-            exit_tip = "The nearest exit is Gate A, located straight ahead for 150 yards from the Section 101 corridor."
-            food_tip = "Concessions are 30 yards to the right. Stands include Section 105 (Burger Grill) and Section 120 (Taco Stand)."
-            seat_tip = "To find Section 114, locate the Section 112 marker on your left, then walk 20 paces forward."
-            transport_tip = "Metro station entrance is 200 yards directly east of the main gate. Accessible shuttle buses are parked in Lot C to the north-east."
-            sustain_tip = "A water refill station is 10 paces past Section 108 on the right side wall."
-        elif is_cognitive:
-            restroom_tip = "Restrooms are at Section 112. They are easy to find and have large signs."
-            exit_tip = "Exits are at Gate A. Just follow the green exit signs."
-            food_tip = "Food stands are at Section 105 and Section 120. They sell burgers, hotdogs, and water."
-            seat_tip = "Go to Section 114. Look for the blue seat signs. Staff in yellow shirts can help you."
-            transport_tip = (
-                "Buses are in Lot C. The Metro is nearby. Both are safe and clean."
-            )
-            sustain_tip = (
-                "Recycle bottles in the blue bins. Water stations are near Section 108."
-            )
-        else:
-            restroom_tip = (
-                "Restrooms are located on the main concourse near Sections 112 and 131."
-            )
-            exit_tip = "Exits are located at Gate A (North), Gate B (East), and Gate C (South)."
-            food_tip = "Concession stands are located throughout the concourse. Popular options include the Burger Grill at Section 105 and Taco Stand at Section 120."
-            seat_tip = "Please look at the directional signage on the concourse walls. Section numbers are clearly marked above the seating entry tunnels."
-            transport_tip = "The Metro station is a 5-minute walk from Gate A. Shuttle buses are located in Lot C. Rideshare pickup is at Gate 2."
-            sustain_tip = "Please use the blue recycling bins located at every section entrance. Water refill stations are available near Section 108 and 124."
+        tips = self._build_role_responses(
+            is_organizer, is_wheelchair, is_visual, is_cognitive
+        )
+        matched = self._select_response(msg, tips, is_organizer)
+        if matched is not None:
+            return matched
 
-        # Keyword matching
-        if any(kw in msg for kw in ["restroom", "toilet", "bathroom", "wc"]):
-            if is_organizer:
-                return f"Operations Alert: {restroom_tip}"
-            return f"{restroom_tip} Please let me know if you need help finding anything else."
-        elif any(kw in msg for kw in ["exit", "gate", "leave", "out"]):
-            if is_organizer:
-                return f"Logistics Alert: {exit_tip}"
-            return f"{exit_tip} Thank you for visiting the stadium today!"
-        elif any(
-            kw in msg
-            for kw in [
-                "food",
-                "eat",
-                "drink",
-                "beer",
-                "hungry",
-                "thirsty",
-                "concession",
-            ]
-        ):
-            if is_organizer:
-                return f"Concessions Advisory: {food_tip}"
-            return f"Hungry? {food_tip} Soft drinks and water are also sold there."
-        elif any(
-            kw in msg for kw in ["seat", "section", "find", "where is my", "where's my"]
-        ):
-            if is_organizer:
-                return f"Seating Advisory: {seat_tip}"
-            return (
-                f"{seat_tip} Volunteers in yellow vests are standing by to guide you."
-            )
-        elif any(
-            kw in msg
-            for kw in [
-                "transport",
-                "metro",
-                "bus",
-                "shuttle",
-                "uber",
-                "rideshare",
-                "park",
-                "car",
-            ]
-        ):
-            if is_organizer:
-                return f"Transit Command: {transport_tip}"
-            return f"Here is the transport info: {transport_tip} Expect moderate post-match delays."
-        elif any(
-            kw in msg
-            for kw in [
-                "sustainability",
-                "recycle",
-                "water",
-                "green",
-                "trash",
-                "environment",
-            ]
-        ):
-            if is_organizer:
-                return f"Sustainability Status: {sustain_tip}"
-            return (
-                f"Eco Nudge: {sustain_tip} Help us keep the FIFA World Cup 2026 green!"
-            )
-        elif any(
-            kw in msg
-            for kw in ["accessibility", "wheelchair", "step-free", "elevator", "ramp"]
-        ):
-            if is_organizer:
-                return f"Accessibility Incident Report: {exit_tip} {restroom_tip}"
-            return f"Accessibility Guidance: {exit_tip} {restroom_tip}"
-
-        # Generic helpful assistant answer
+        # Generic fallback greeting
         if is_organizer:
             return (
                 "FIFA 2026 Operations Command Center Assistant. "
