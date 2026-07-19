@@ -9,12 +9,72 @@ from backend.models import ChatRequest, ChatResponse
 from backend.genai_client import genai_client
 from backend.personas import build_system_prompt
 
+# ---------------------------------------------------------------------------
+# Module-level keyword sets for suggested-action detection.
+# Keeping them here avoids re-allocating the same lists on every request.
+# ---------------------------------------------------------------------------
+
+_TRANSPORT_KW: list[str] = [
+    "transport",
+    "metro",
+    "bus",
+    "shuttle",
+    "uber",
+    "rideshare",
+    "walk",
+    "lot",
+]
+_FOOD_KW: list[str] = ["food", "eat", "drink", "beer", "hungry", "concession", "snack"]
+_RESTROOM_KW: list[str] = ["restroom", "toilet", "bathroom", "wc"]
+_SUSTAIN_KW: list[str] = [
+    "sustainability",
+    "recycle",
+    "water",
+    "green",
+    "trash",
+    "environment",
+]
+
+
+def _build_suggested_actions(reply_lower: str) -> list[str]:
+    """
+    Derives context-aware quick-action labels from the reply text.
+
+    Why keyword-scanning the reply rather than the request: the GenAI response
+    may introduce topics the user didn't explicitly ask about (e.g. mentioning
+    the Metro when answering a seating question), so scanning the reply gives
+    more relevant action cards than scanning the incoming message.
+    """
+    actions: list[str] = []
+    if any(kw in reply_lower for kw in _TRANSPORT_KW):
+        actions.append("View Transport Options")
+    if any(kw in reply_lower for kw in _FOOD_KW):
+        actions.append("Locate Concessions")
+    if any(kw in reply_lower for kw in _RESTROOM_KW):
+        actions.append("Find Nearest Restroom")
+    if any(kw in reply_lower for kw in _SUSTAIN_KW):
+        actions.append("View Sustainability Tips")
+
+    # Guarantee at least two action cards for UX consistency
+    if not actions:
+        return ["Check Crowd Levels", "Find Near Exit"]
+    if len(actions) < 2:
+        fallback = (
+            "Find Near Exit"
+            if "Check Crowd Levels" in actions
+            else "Check Crowd Levels"
+        )
+        actions.append(fallback)
+    return actions
+
 
 def get_chat_response(request: ChatRequest) -> ChatResponse:
     """
-    Processes chat requests using the built persona prompts and context attributes.
+    Processes a chat request and returns a persona-aware reply with action cards.
 
-    Determines dynamic suggested action cards based on keywords in the reply.
+    The user's free-text message is passed exclusively to the GenAI `user`
+    message slot — it never touches the system prompt — to prevent prompt injection.
+    Suggested actions are derived from the reply content, not the request.
     """
     system_prompt = build_system_prompt(request.context)
 
@@ -23,52 +83,7 @@ def get_chat_response(request: ChatRequest) -> ChatResponse:
         system_prompt=system_prompt, user_message=request.message, max_tokens=400
     )
 
-    # Suggested actions based on response content keyword matching (efficiency rule)
-    reply_lower = reply.lower()
-    suggested_actions: list[str] = []
-
-    if any(
-        kw in reply_lower
-        for kw in [
-            "transport",
-            "metro",
-            "bus",
-            "shuttle",
-            "uber",
-            "rideshare",
-            "walk",
-            "lot",
-        ]
-    ):
-        suggested_actions.append("View Transport Options")
-    if any(
-        kw in reply_lower
-        for kw in ["food", "eat", "drink", "beer", "hungry", "concession", "snack"]
-    ):
-        suggested_actions.append("Locate Concessions")
-    if any(kw in reply_lower for kw in ["restroom", "toilet", "bathroom", "wc"]):
-        suggested_actions.append("Find Nearest Restroom")
-    if any(
-        kw in reply_lower
-        for kw in [
-            "sustainability",
-            "recycle",
-            "water",
-            "green",
-            "trash",
-            "environment",
-        ]
-    ):
-        suggested_actions.append("View Sustainability Tips")
-
-    # Standard fallback actions
-    if not suggested_actions:
-        suggested_actions = ["Check Crowd Levels", "Find Near Exit"]
-    elif len(suggested_actions) < 2:
-        if "Check Crowd Levels" not in suggested_actions:
-            suggested_actions.append("Check Crowd Levels")
-        else:
-            suggested_actions.append("Find Near Exit")
+    suggested_actions = _build_suggested_actions(reply.lower())
 
     return ChatResponse(
         reply=reply,

@@ -11,6 +11,66 @@ from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Module-level keyword and phrasing constants for the mock response engine.
+# Separating data from logic keeps _select_response purely algorithmic.
+# ---------------------------------------------------------------------------
+
+# Maps each topic to the keywords that trigger it.
+_TOPIC_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("restroom", ["restroom", "toilet", "bathroom", "wc"]),
+    ("exit", ["exit", "gate", "leave", "out"]),
+    ("food", ["food", "eat", "drink", "beer", "hungry", "thirsty", "concession"]),
+    ("seat", ["seat", "section", "find", "where is my", "where's my"]),
+    (
+        "transport",
+        ["transport", "metro", "bus", "shuttle", "uber", "rideshare", "park", "car"],
+    ),
+    (
+        "sustain",
+        ["sustainability", "recycle", "water", "green", "trash", "environment"],
+    ),
+]
+
+# Keywords that trigger the accessibility catch-all handler.
+_ACCESSIBILITY_KEYWORDS: list[str] = [
+    "accessibility",
+    "wheelchair",
+    "step-free",
+    "elevator",
+    "ramp",
+]
+
+# Organizer-facing topic labels (prepended to each response).
+_ORGANIZER_PREFIX: dict[str, str] = {
+    "restroom": "Operations Alert: ",
+    "exit": "Logistics Alert: ",
+    "food": "Concessions Advisory: ",
+    "seat": "Seating Advisory: ",
+    "transport": "Transit Command: ",
+    "sustain": "Sustainability Status: ",
+}
+
+# Standard-fan prefix for topic responses (empty means no label needed).
+_FAN_PREFIX: dict[str, str] = {
+    "restroom": "",
+    "exit": "",
+    "food": "Hungry? ",
+    "seat": "",
+    "transport": "Here is the transport info: ",
+    "sustain": "Eco Nudge: ",
+}
+
+# Friendly closing phrases appended for fan responses.
+_FAN_SUFFIX: dict[str, str] = {
+    "restroom": " Please let me know if you need help finding anything else.",
+    "exit": " Thank you for visiting the stadium today!",
+    "food": " Soft drinks and water are also sold there.",
+    "seat": " Volunteers in yellow vests are standing by to guide you.",
+    "transport": " Expect moderate post-match delays.",
+    "sustain": " Help us keep the FIFA World Cup 2026 green!",
+}
+
 
 class GenAIClient:
     """
@@ -143,76 +203,17 @@ class GenAIClient:
 
         Returns None when no keyword matches, so _mock_complete can fall
         through to the generic greeting without duplicating that logic here.
+        Phrasing constants (_TOPIC_KEYWORDS, _FAN_PREFIX, etc.) are defined
+        at module level to keep this function purely algorithmic.
         """
-        prefix = {
-            "restroom": ("Operations Alert: " if is_organizer else ""),
-            "exit": ("Logistics Alert: " if is_organizer else ""),
-            "food": ("Concessions Advisory: " if is_organizer else "Hungry? "),
-            "seat": ("Seating Advisory: " if is_organizer else ""),
-            "transport": (
-                "Transit Command: " if is_organizer else "Here is the transport info: "
-            ),
-            "sustain": ("Sustainability Status: " if is_organizer else "Eco Nudge: "),
-        }
-        suffix = {
-            "restroom": ""
-            if is_organizer
-            else " Please let me know if you need help finding anything else.",
-            "exit": ""
-            if is_organizer
-            else " Thank you for visiting the stadium today!",
-            "food": ""
-            if is_organizer
-            else " Soft drinks and water are also sold there.",
-            "seat": ""
-            if is_organizer
-            else " Volunteers in yellow vests are standing by to guide you.",
-            "transport": "" if is_organizer else " Expect moderate post-match delays.",
-            "sustain": ""
-            if is_organizer
-            else " Help us keep the FIFA World Cup 2026 green!",
-        }
+        pfx = _ORGANIZER_PREFIX if is_organizer else _FAN_PREFIX
+        sfx = {t: "" for t in _ORGANIZER_PREFIX} if is_organizer else _FAN_SUFFIX
 
-        keyword_map: list[tuple[str, list[str]]] = [
-            ("restroom", ["restroom", "toilet", "bathroom", "wc"]),
-            ("exit", ["exit", "gate", "leave", "out"]),
-            (
-                "food",
-                ["food", "eat", "drink", "beer", "hungry", "thirsty", "concession"],
-            ),
-            ("seat", ["seat", "section", "find", "where is my", "where's my"]),
-            (
-                "transport",
-                [
-                    "transport",
-                    "metro",
-                    "bus",
-                    "shuttle",
-                    "uber",
-                    "rideshare",
-                    "park",
-                    "car",
-                ],
-            ),
-            (
-                "sustain",
-                ["sustainability", "recycle", "water", "green", "trash", "environment"],
-            ),
-        ]
-
-        for topic, keywords in keyword_map:
+        for topic, keywords in _TOPIC_KEYWORDS:
             if any(kw in msg for kw in keywords):
-                return f"{prefix[topic]}{tips[topic]}{suffix[topic]}"
+                return f"{pfx[topic]}{tips[topic]}{sfx[topic]}"
 
-        # Accessibility keyword catch-all
-        accessibility_keywords = [
-            "accessibility",
-            "wheelchair",
-            "step-free",
-            "elevator",
-            "ramp",
-        ]
-        if any(kw in msg for kw in accessibility_keywords):
+        if any(kw in msg for kw in _ACCESSIBILITY_KEYWORDS):
             label = (
                 "Accessibility Incident Report: "
                 if is_organizer
@@ -231,14 +232,16 @@ class GenAIClient:
         preferences parsed from the system prompt.
         """
         msg = user_message.lower()
-        sys = system_prompt.lower()
+        sys_prompt = system_prompt.lower()
 
         is_organizer = (
-            "organizer" in sys or "operations control" in sys or "organizer" in msg
+            "organizer" in sys_prompt
+            or "operations control" in sys_prompt
+            or "organizer" in msg
         )
-        is_wheelchair = "wheelchair" in sys or "wheelchair" in msg
-        is_visual = "visual" in sys or "visual" in msg
-        is_cognitive = "cognitive" in sys or "cognitive" in msg
+        is_wheelchair = "wheelchair" in sys_prompt or "wheelchair" in msg
+        is_visual = "visual" in sys_prompt or "visual" in msg
+        is_cognitive = "cognitive" in sys_prompt or "cognitive" in msg
 
         tips = self._build_role_responses(
             is_organizer, is_wheelchair, is_visual, is_cognitive

@@ -14,7 +14,7 @@ from backend.genai_client import genai_client
 
 def _get_minute_bucket() -> str:
     """Returns the current UTC time bucketed to the nearest minute."""
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     return now.strftime("%Y-%m-%d %H:%M")
 
 
@@ -61,7 +61,7 @@ def _calculate_trend_and_history(
     Computes a deterministic historical trend (10m ago, 5m ago, now) for a zone.
     Why: Provides operational intelligence trends without requiring a live database.
     """
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
     t_now = now.strftime("%Y-%m-%d %H:%M")
     t_5 = (now - datetime.timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M")
     t_10 = (now - datetime.timedelta(minutes=10)).strftime("%Y-%m-%d %H:%M")
@@ -152,7 +152,7 @@ def get_crowd_status(stadium_id: str) -> CrowdResponse:
     overall_recommendation = _get_overall_recommendation(
         zones_status, has_congested_zone
     )
-    generated_at = datetime.datetime.utcnow().isoformat() + "Z"
+    generated_at = datetime.datetime.now(datetime.UTC).isoformat() + "Z"
 
     return CrowdResponse(
         stadium_id=stadium["id"],

@@ -92,7 +92,7 @@ def get_transport_options(
                 "It is a short walk from Gate A and runs on dedicated tracks away from road traffic."
             )
 
-    generated_at = datetime.datetime.utcnow().isoformat() + "Z"
+    generated_at = datetime.datetime.now(datetime.UTC).isoformat() + "Z"
 
     return TransportResponse(
         options=options,

@@ -70,12 +70,24 @@ class RateLimiterMiddleware(BaseHTTPMiddleware):
     """
 
     def __init__(self, app: FastAPI, limit_per_minute: int):
+        """
+        Initialises the middleware with a per-IP request cap.
+
+        Uses a fixed-window algorithm. Timestamps older than 60 seconds are
+        pruned on each request, so memory usage stays bounded per active IP.
+        """
         super().__init__(app)
         self.limit = limit_per_minute
         # Maps IP -> list of timestamps
         self.requests: dict[str, list[float]] = {}
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        """
+        Intercepts /api/chat and /api/translate to enforce per-IP rate limits.
+
+        Requests exceeding the cap receive a 429 immediately; all other paths
+        and compliant requests are passed through to the next handler unchanged.
+        """
         path = request.url.path
         if path in ("/api/chat", "/api/translate"):
             client_ip = request.client.host if request.client else "unknown"
@@ -117,6 +129,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        """
+        Strips server fingerprinting headers from every outgoing response.
+
+        Removing `server` and `x-powered-by` prevents attackers from learning
+        which framework version is running, reducing the surface for targeted exploits.
+        """
         response = await call_next(request)
         if "server" in response.headers:
             del response.headers["server"]
@@ -131,6 +149,13 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Global Exception Handler (prevents leaking stack traces or credentials in response payloads)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """
+    Catches any unhandled exception and returns a safe 500 response.
+
+    Why: Without this handler, FastAPI would surface raw Python tracebacks
+    or exception messages in the response body, potentially leaking internal
+    state, file paths, or configuration details to the client.
+    """
     logger.exception(f"Unhandled error during request to {request.url.path}: {exc}")
     return JSONResponse(
         status_code=500,
